@@ -2,12 +2,16 @@ import random
 import primer3
 from primer3 import thermoanalysis
 
-seq = 'ACATGCATCGGGCTATTGCGGCTAGCTAGCTAGCTGCTAC'
+# seq = 'ACATGCATCGGGCTATTGCGGCTAGCTAGCTAGCTGCTAC'
 
-en = primer3.bindings.calcEndStability()
-Ha = primer3.calcHairpin(seq)
+# en = primer3.bindings.calcEndStability()
+# Ha = primer3.calcHairpin(seq)
 
-print(Ha.structure_found)
+# print(Ha.structure_found)
+
+# with open('C:\\Users\\admin\\Desktop\\zhuanhuan\\Blast\\mytemp.fasta','r') as a:
+#     nei = a.read()
+#     print(nei)
 
 # class tes:
 #     def __init__(self) -> None:

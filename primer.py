@@ -4,6 +4,7 @@
 import random
 from nucleotides import Tm,ifdimer,conCG
 import os
+import multiprocessing
 
 PRIMER_LENGTH = (18,22)
 PRIMER_23GAP = (0,60)
@@ -81,10 +82,10 @@ def readfasta(filepath:str) -> dict:
     return a
 
 # 计算blast得分
-def blastn(query):
+def blastn(query:str, name:str, q) -> float:
     # return random.randint(100,600)
     # query = r'GGACAAACGTCATAACTAGC'
-    with open(r'C:\Users\admin\Desktop\zhuanhuan\Blast\mytemp.fasta','w') as myfa:
+    with open('C:\\Users\\admin\\Desktop\\zhuanhuan\\Blast\\'+name+'.fasta','w') as myfa:
         myfa.write('>myquery\n')
         myfa.write(query)
 
@@ -92,8 +93,9 @@ def blastn(query):
     # blastcmd = 'blastn -query C:/Users/admin/Desktop/zhuanhuan/Blast/mytemp.fasta -db C:/Users/admin/Desktop/zhuanhuan/Blast/FCVfull -evalue 1 -task blastn -outfmt "6 delim=  sstart send qstart qend qlen saccver"'
     sum = 0
 
-    with os.popen(r'blastn -query C:/Users/admin/Desktop/zhuanhuan/Blast/mytemp.fasta -db C:/Users/admin/Desktop/zhuanhuan/Blast/FCVfull -evalue 1 -task blastn -outfmt "6 delim=  qlen qstart qend mismatch"') as blast:
+    with os.popen('blastn -query C:/Users/admin/Desktop/zhuanhuan/Blast/'+name+'.fasta -db C:/Users/admin/Desktop/zhuanhuan/Blast/FCVfull -evalue 1 -task blastn -outfmt "6 delim=  qlen qstart qend mismatch"') as blast:
         r = blast.readlines()
+        # print(r)
         for line in r:
             l = line.split()
             qlen = int(l[0])
@@ -103,7 +105,9 @@ def blastn(query):
             score = 1 - 0.5*(qstart - 1)/qlen - 1*(qlen - qend)/qlen - 0.3*mism/qlen
             # print(score)
             sum = sum + score
-    return sum
+    # return sum
+    # q.send(sum)
+    q.put(sum)
 
 class primersets:
     '''
@@ -176,15 +180,34 @@ class primersets:
         else:
             return 1
 
-    def fitness(self) -> float:
+    def fitness(self):
         '''计算自己的适合度，之后存入self.blastscore'''
         try:
             self.blastscore
         except AttributeError:
-            self.blastscore = 0
+        # self.blastscore = 0
+            job = []
+            # mpp = []
+            mpq = multiprocessing.Queue()
             for key in self.primer_seq:
-                self.blastscore += blastn(self.primer_seq[key])
-            return self.blastscore
+            #     self.blastscore += blastn(self.primer_seq[key])
+            # return self.blastscore
+                # parent_conn, child_conn = multiprocessing.Pipe()
+                thisp = multiprocessing.Process(target=blastn,args=(self.primer_seq[key],key,mpq))
+                # print(self.primer_seq[key])
+                job.append(thisp)
+                thisp.start()
+                # mpp.append(parent_conn)
+
+            for p in job:
+                p.join()
+            
+            blascore = 0
+            for p in job:
+                blascore += mpq.get()
+                # print(blascore)
+
+            self.blastscore = blascore
         else:
             return self.blastscore
 
