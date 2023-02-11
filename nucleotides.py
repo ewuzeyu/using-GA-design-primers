@@ -119,9 +119,9 @@ def quickSort(listx):
     if len(listx)<=1:
         return listx
     pivot = listx[len(listx)//2]
-    listl = [x for x in listx if x.blastscore > pivot.blastscore]
-    listm = [x for x in listx if x.blastscore ==pivot.blastscore]
-    listr = [x for x in listx if x.blastscore < pivot.blastscore]
+    listl = [x for x in listx if x.getblastscore() > pivot.getblastscore()]
+    listm = [x for x in listx if x.getblastscore() ==pivot.getblastscore()]
+    listr = [x for x in listx if x.getblastscore() < pivot.getblastscore()]
     left = quickSort(listl)
     right = quickSort(listr)
     return left + listm + right

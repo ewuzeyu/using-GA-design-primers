@@ -5,6 +5,7 @@ import random
 from nucleotides import Tm,ifdimer,conCG
 import os
 import multiprocessing
+import threading
 
 PRIMER_LENGTH = (18,22)
 PRIMER_23GAP = (0,60)
@@ -85,6 +86,7 @@ def readfasta(filepath:str) -> dict:
 def blastn(query:str, name:str, q) -> float:
     # return random.randint(100,600)
     # query = r'GGACAAACGTCATAACTAGC'
+    # print('-',end='')
     with open('C:\\Users\\admin\\Desktop\\zhuanhuan\\Blast\\'+name+'.fasta','w') as myfa:
         myfa.write('>myquery\n')
         myfa.write(query)
@@ -185,7 +187,8 @@ class primersets:
         try:
             self.blastscore
         except AttributeError:
-        # self.blastscore = 0
+            self.blastscore = 0
+            # print('-',end='')
             job = []
             # mpp = []
             mpq = multiprocessing.Queue()
@@ -193,7 +196,8 @@ class primersets:
             #     self.blastscore += blastn(self.primer_seq[key])
             # return self.blastscore
                 # parent_conn, child_conn = multiprocessing.Pipe()
-                thisp = multiprocessing.Process(target=blastn,args=(self.primer_seq[key],key,mpq))
+                # thisp = multiprocessing.Process(target=blastn,args=(self.primer_seq[key],key,mpq))
+                thisp = threading.Thread(target=blastn,args=(self.primer_seq[key],key,mpq))
                 # print(self.primer_seq[key])
                 job.append(thisp)
                 thisp.start()
@@ -208,6 +212,7 @@ class primersets:
                 # print(blascore)
 
             self.blastscore = blascore
+            # print('-',end='')
         else:
             return self.blastscore
 
@@ -241,6 +246,22 @@ class primersets:
     def printself(self) -> None:
         print(self.init_primers)
 
+    def getblastscore(self) -> float:
+        return self.blastscore
+    
+    def getinit_primers(self):
+        return self.init_primers
+
+    def getdegbase(self):
+        return self.degbase
+
+    def getprimersets(self):
+        return 'fitness:%.2f | %d:%s,%d:%s,%d:%s,%d:%s,%d:%s,%d:%s' % (self.blastscore,self.order_primers['start'],self.primer_seq['F3'], \
+                                                    self.order_primers['p2'],self.primer_seq['F2'], \
+                                                    self.order_primers['p4'],self.primer_seq['F1c'], \
+                                                    self.order_primers['gap'],self.primer_seq['B3'], \
+                                                    self.order_primers['p9'],self.primer_seq['B2'], \
+                                                    self.order_primers['p7'],self.primer_seq['B1c'])
 
     def __str__(self) -> str:
         return 'fitness:%.2f | %d:%s,%d:%s,%d:%s,%d:%s,%d:%s,%d:%s' % (self.blastscore,self.order_primers['start'],self.primer_seq['F3'], \
@@ -251,9 +272,7 @@ class primersets:
                                                     self.order_primers['p7'],self.primer_seq['B1c'])
     # def degbase_generator(self,)
 
-def duplicate_primer(dup:primersets) -> primersets:
-    a = primersets(existprimer=dictdeepcopy(dup.init_primers), existdegbase=listdeepcopy(dup.degbase))
-    return a
+
 
 def hybrid_primer(pa:primersets,pb:primersets) -> int:
     '''两个引物杂交，成功返回1，重复5次不成功返回0'''
@@ -264,9 +283,9 @@ def hybrid_primer(pa:primersets,pb:primersets) -> int:
         ifswap = randomlist(0,1,12)
         for i in range(12):
             if ifswap[i]:
-                temp = pa.init_primers[order[i]]
-                pa.init_primers[order[i]] = pb.init_primers[order[i]]
-                pb.init_primers[order[i]] = temp
+                temp = pa.getinit_primers()[order[i]]
+                pa.getinit_primers()[order[i]] = pb.getinit_primers()[order[i]]
+                pb.getinit_primers()[order[i]] = temp
         if pa.init_verify() and pb.init_verify():
             return 1
         else:

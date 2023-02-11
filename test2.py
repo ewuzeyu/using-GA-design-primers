@@ -1,44 +1,85 @@
-import random
-import primer3
-from primer3 import thermoanalysis
+#-*- coding = utf-8
+# 主程序
+from nucleotides import *
+import time
+from primer import *
+import multiprocessing
+from multiprocessing.managers import BaseManager
 
-# seq = 'ACATGCATCGGGCTATTGCGGCTAGCTAGCTAGCTGCTAC'
+class Mymanager(BaseManager):
+    pass
 
-# en = primer3.bindings.calcEndStability()
-# Ha = primer3.calcHairpin(seq)
+Mymanager.register('primersets',primersets)
+manager = Mymanager()
 
-# print(Ha.structure_found)
 
-# with open('C:\\Users\\admin\\Desktop\\zhuanhuan\\Blast\\mytemp.fasta','r') as a:
-#     nei = a.read()
-#     print(nei)
+def duplicate_primer(dup:primersets) -> primersets:
+    a = manager.primersets(existprimer=dictdeepcopy(dup.getinit_primers()), existdegbase=listdeepcopy(dup.getdegbase()))
+    return a
 
-# class tes:
-#     def __init__(self) -> None:
-#         self.num = random.randint(1,100)
+def prtmcal(pr):
+    # pr.printself()
+    pr.fitness()
 
-# l = []
-# for i in range(50):
-#     l.append(tes())
+if __name__ == "__main__":
 
-# for i in l:
-#     print(i.num)
-# print('排序中')
-# def quickSort(listx):
-#     if len(listx)<=1:
-#         return listx
-#     pivot = listx[len(listx)//2]
-#     listl = [x for x in listx if x.num < pivot.num]
-#     listm = [x for x in listx if x.num ==pivot.num]
-#     listr = [x for x in listx if x.num > pivot.num]
-#     left = quickSort(listl)
-#     right = quickSort(listr)
-#     return left + listm + right
+    manager.start()
+    time1 = time.time()
+    f = open(file='log5.txt',mode='a')
+    # 初始化
+    p1 = manager.primersets()
+    batch = 10 # 批次数
+    elite = 5 # 精英数
+    TOTALCYCLE = 5 # 总循环数
+    
+    # mngr = multiprocessing.Manager() # 进程管理器，传递py对象
+    # manager = BaseManager()
+    # manager.register('primersets',primersets)
+    # manager.start()
 
-# a = quickSort(l)
+    # 导入序列
+    fasta = 'conseq.fasta'
+    seqdict = readfasta(fasta)
+    seq = seqdict['Consensus']
 
-# for i in l:
-#     print(i.num)
-# print('---')
-# for i in a:
-#     print(i.num)
+    # 前处理
+    # solution = mngr.list()
+    solution = [p1 for i in range(batch)]
+    hybrid = [p1 for i in range(batch)]
+    mutant = [p1 for i in range(batch)]
+
+    # 生成最初解
+
+    for i in range(batch):
+        t = 0
+        # a = primersets(1,len(seq))
+        while t != 1:
+            a = manager.primersets(1,len(seq))
+            a.getPrimerSeq(seq)
+            t = a.Filter()
+        # a.fitness()
+        solution[i] = a
+        # a.printself()
+
+    for tejifje in range(TOTALCYCLE):
+        # 计算适应度
+        print('计算适应度')
+        # for ps in solution:
+        #     mtpool.apply_async(prtmcal,args=(ps,))
+            # ps.fitness()
+        mtpool = multiprocessing.Pool(4) # 进程管理池
+        mtpool.map_async(prtmcal,solution)
+        mtpool.close()
+        mtpool.join()
+        # print('zuse')
+        # 排序
+        ranked = quickSort(solution)
+
+        f.write('-------'+str(tejifje)+'-------\n')
+        # 输出部分信息
+        for c in range(elite):
+            f.write(ranked[c].getprimersets()+'\n')
+
+    f.close()
+    time2 = time.time()
+    print(time2 - time1)

@@ -3,16 +3,39 @@
 from nucleotides import *
 import time
 from primer import *
+import multiprocessing
+from multiprocessing.managers import BaseManager
+
+class Mymanager(BaseManager):
+    pass
+
+Mymanager.register('primersets',primersets)
+manager = Mymanager()
+
+
+def duplicate_primer(dup:primersets) -> primersets:
+    a = manager.primersets(existprimer=dictdeepcopy(dup.getinit_primers()), existdegbase=listdeepcopy(dup.getdegbase()))
+    return a
+
+def prtmcal(pr):
+    # pr.printself()
+    pr.fitness()
 
 if __name__ == "__main__":
 
+    manager.start()
     time1 = time.time()
-    f = open(file='log3.txt',mode='a')
+    f = open(file='log5.txt',mode='a')
     # 初始化
-    p1 = primersets()
+    p1 = manager.primersets()
     batch = 100 # 批次数
     elite = 10 # 精英数
     TOTALCYCLE = 10 # 总循环数
+    
+    # mngr = multiprocessing.Manager() # 进程管理器，传递py对象
+    # manager = BaseManager()
+    # manager.register('primersets',primersets)
+    # manager.start()
 
     # 导入序列
     fasta = 'conseq.fasta'
@@ -20,6 +43,7 @@ if __name__ == "__main__":
     seq = seqdict['Consensus']
 
     # 前处理
+    # solution = mngr.list()
     solution = [p1 for i in range(batch)]
     hybrid = [p1 for i in range(batch)]
     mutant = [p1 for i in range(batch)]
@@ -28,27 +52,33 @@ if __name__ == "__main__":
 
     for i in range(batch):
         t = 0
-        a = primersets(1,len(seq))
+        # a = primersets(1,len(seq))
         while t != 1:
-            a = primersets(1,len(seq))
+            a = manager.primersets(1,len(seq))
             a.getPrimerSeq(seq)
             t = a.Filter()
         # a.fitness()
         solution[i] = a
+        # a.printself()
 
     for tejifje in range(TOTALCYCLE):
         # 计算适应度
         print('计算适应度')
-        for ps in solution:
-            ps.fitness()
-
+        # for ps in solution:
+        #     mtpool.apply_async(prtmcal,args=(ps,))
+            # ps.fitness()
+        mtpool = multiprocessing.Pool(4) # 进程管理池
+        mtpool.map_async(prtmcal,solution)
+        mtpool.close()
+        mtpool.join()
+        # print('zuse')
         # 排序
         ranked = quickSort(solution)
-
+        print(time.time()-time1)
         f.write('-------'+str(tejifje)+'-------\n')
         # 输出部分信息
-        for c in range(5):
-            f.write(ranked[c].__str__()+'\n')
+        for c in range(elite):
+            f.write(ranked[c].getprimersets()+'\n')
         print('杂交')
         # 杂交
         i = 0
@@ -91,9 +121,9 @@ if __name__ == "__main__":
                 solution[i] = mutant[random.randint(0,batch-1)]
             else:
                 t = 0
-                a = primersets(1,len(seq))
+                a = manager.primersets(1,len(seq))
                 while t != 1:
-                    a = primersets(1,len(seq))
+                    a = manager.primersets(1,len(seq))
                     a.getPrimerSeq(seq)
                     t = a.Filter()
                 solution[i] = a
