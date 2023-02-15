@@ -33,6 +33,60 @@ def randomlist(start:str, stop:str, length:str) -> list:
         random_list.append(random.randint(start, stop))
     return random_list
 
+def dec2vigse(n, x = 26):
+    #n为待转换的十进制数，x为机制，取值为2-16
+    a=['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+    b=[]
+    while True:
+        s=n // x  # 商
+        y=n % x  # 余数
+        b=b+[y]
+        if s==0:
+            break
+        n=s
+    b.reverse() # 辗转相除法
+    ans = ''
+    for i in b:
+        ans += a[i]
+    return ans
+
+def vigse2dec(n, x = 26):
+    a = {'a':0,'b':1,'c':2,'d':3,'e':4,'f':5,'g':6,'h':7,'i':8,'j':9,'k':10,'l':11,'m':12,'n':13,'o':14,'p':15,'q':16,'r':17,'s':18,'t':19,'u':20,'v':21,'w':22,'x':23,'y':24,'z':25}
+    result = 0
+    for i in range(len(n)):
+        result *= x
+        result += a[n[i]]
+    return result
+
+def primer2zip(p:dict) -> str:
+    res = ''
+    start = dec2vigse(p['start'])
+    start = 'a'*(3-len(start)) + start
+    res = res + start
+    gap = dec2vigse(p['gap'])
+    gap = 'a'*(2-len(gap)) + gap
+    res = res + gap
+    a1 = ['p1','p3','p5','p6','p8','p10']
+    a2 = ['p2','p4','p7','p9']
+    for t in a1:
+        res = res + dec2vigse(p[t])
+    for t in a2:
+        pd = dec2vigse(p[t])
+        res = res + 'a'*(2-len(pd)) + pd
+    return res
+
+def zip2primer(s:str) -> dict:
+    a = {}
+    b1 = ['p1','p3','p5','p6','p8','p10']
+    b2 = ['p2','p4','p7','p9']
+    a['start'] = vigse2dec(s[0:3])
+    a['gap'] = vigse2dec(s[3:5])
+    for i in range(len(b1)):
+        a[b1[i]] = vigse2dec(s[i+5:i+6])
+    for i in range(len(b2)):
+        a[b2[i]] = vigse2dec(s[i*2+11:i*2+13])
+    return a
+
 def multiply(l1:list,l2:list) -> list:
     if len(l1) != len(l2):
         return 0
@@ -83,11 +137,11 @@ def readfasta(filepath:str) -> dict:
     return a
 
 # 计算blast得分
-def blastn(query:str, name:str, q) -> float:
+def blastn(query:str, q) -> float:
     # return random.randint(100,600)
     # query = r'GGACAAACGTCATAACTAGC'
     # print('-',end='')
-    with open('C:\\Users\\admin\\Desktop\\zhuanhuan\\Blast\\'+name+'.fasta','w') as myfa:
+    with open('C:\\Users\\admin\\Desktop\\zhuanhuan\\Blast\\qprimer\\'+query+'.fasta','w') as myfa:
         myfa.write('>myquery\n')
         myfa.write(query)
 
@@ -95,7 +149,7 @@ def blastn(query:str, name:str, q) -> float:
     # blastcmd = 'blastn -query C:/Users/admin/Desktop/zhuanhuan/Blast/mytemp.fasta -db C:/Users/admin/Desktop/zhuanhuan/Blast/FCVfull -evalue 1 -task blastn -outfmt "6 delim=  sstart send qstart qend qlen saccver"'
     sum = 0
 
-    with os.popen('blastn -query C:/Users/admin/Desktop/zhuanhuan/Blast/'+name+'.fasta -db C:/Users/admin/Desktop/zhuanhuan/Blast/FCVfull -evalue 1 -task blastn -outfmt "6 delim=  qlen qstart qend mismatch"') as blast:
+    with os.popen('blastn -query C:/Users/admin/Desktop/zhuanhuan/Blast/qprimer/'+query+'.fasta -db C:/Users/admin/Desktop/zhuanhuan/Blast/FCVfull -evalue 1 -task blastn -outfmt "6 delim=  qlen qstart qend mismatch"') as blast:
         r = blast.readlines()
         # print(r)
         for line in r:
@@ -128,6 +182,7 @@ class primersets:
             self.sstart = start
             self.send = end
             self.init_primers = primer_generator(start,end)
+        self.code = primer2zip(self.init_primers)
         self.degbase = []
         if existdegbase:
             self.degbase = existdegbase
@@ -193,11 +248,14 @@ class primersets:
             # mpp = []
             mpq = multiprocessing.Queue()
             for key in self.primer_seq:
+                # if key in exist:
+                #     mpq.put(exist[key])
+                #     continue
             #     self.blastscore += blastn(self.primer_seq[key])
             # return self.blastscore
                 # parent_conn, child_conn = multiprocessing.Pipe()
                 # thisp = multiprocessing.Process(target=blastn,args=(self.primer_seq[key],key,mpq))
-                thisp = threading.Thread(target=blastn,args=(self.primer_seq[key],key,mpq))
+                thisp = threading.Thread(target=blastn,args=(self.primer_seq[key],mpq))
                 # print(self.primer_seq[key])
                 job.append(thisp)
                 thisp.start()
@@ -213,6 +271,7 @@ class primersets:
 
             self.blastscore = blascore
             # print('-',end='')
+            return self.blastscore
         else:
             return self.blastscore
 
@@ -241,6 +300,7 @@ class primersets:
                 else:
                     self.init_primers['start'] = random.randint(self.sstart,
                                         self.send-self.init_primers['p3']-self.init_primers['p4']-self.init_primers['p5']-self.init_primers['p8']-self.init_primers['p9']-self.init_primers['p10']-self.init_primers['p1']-self.init_primers['p2']-self.init_primers['p6']-self.init_primers['p7']-self.init_primers['gap'])
+        self.code = primer2zip(self.init_primers)
         return 1
 
     def printself(self) -> None:
@@ -254,6 +314,13 @@ class primersets:
 
     def getdegbase(self):
         return self.degbase
+
+    def codefresh(self):
+        self.code = primer2zip(self.init_primers)
+        return
+    
+    def getcode(self):
+        return self.code
 
     def getprimersets(self):
         return 'fitness:%.2f | %d:%s,%d:%s,%d:%s,%d:%s,%d:%s,%d:%s' % (self.blastscore,self.order_primers['start'],self.primer_seq['F3'], \
@@ -274,23 +341,7 @@ class primersets:
 
 
 
-def hybrid_primer(pa:primersets,pb:primersets) -> int:
-    '''两个引物杂交，成功返回1，重复5次不成功返回0'''
-    order = ['start','p1','p2','p3','p4','p5','gap','p10','p9','p8','p7','p6']
-    t = 5
-    # print(ifswap)
-    while t > 0:
-        ifswap = randomlist(0,1,12)
-        for i in range(12):
-            if ifswap[i]:
-                temp = pa.getinit_primers()[order[i]]
-                pa.getinit_primers()[order[i]] = pb.getinit_primers()[order[i]]
-                pb.getinit_primers()[order[i]] = temp
-        if pa.init_verify() and pb.init_verify():
-            return 1
-        else:
-            t -= 1
-    return 0
+
 
 def hybrid_degbase(pa:primersets,pb:primersets) -> list:
     pass
