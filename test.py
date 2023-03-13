@@ -68,6 +68,6 @@ if __name__ == '__main__':
     b.getPrimerSeq(seq)
     print(a.getcode())
     print(b.getcode())
-    a,b = hybrid_primer(a,b)
+    # a,b = hybrid_primer(a,b)
     print(a.getcode())
     print(b.getcode())
