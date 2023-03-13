@@ -63,7 +63,7 @@ if __name__ == "__main__":
 
     manager.start()
     time1 = time.time()
-    f = open(file='/log/log5.txt',mode='a')
+    f = open(file='./log/log5.txt',mode='a')
     # 初始化
     p1 = manager.primersets()
     batch = 10 # 批次数
